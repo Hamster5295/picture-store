@@ -3,8 +3,8 @@ use std::{
     sync::{Arc, OnceLock},
 };
 
-use anyhow::{Context, Result};
-use kovi::{RuntimeBot, tokio::fs};
+use anyhow::{Context, Result, anyhow};
+use kovi::{RuntimeBot, event::id::ID, tokio::fs};
 use serde::Deserialize;
 
 use crate::consts::CONFIG_PATH;
@@ -13,7 +13,7 @@ pub(crate) static CONFIG: OnceLock<Config> = OnceLock::new();
 
 #[derive(Deserialize, Clone)]
 pub(crate) struct GroupPerm {
-    pub(crate) id: i64,
+    pub(crate) id: ID,
     pub(crate) send: Option<bool>,
     pub(crate) store: Option<bool>,
     pub(crate) tokens: Option<Vec<String>>,
@@ -22,8 +22,8 @@ pub(crate) struct GroupPerm {
 #[derive(Deserialize)]
 pub(crate) struct ConfigFile {
     pub(crate) allow_groups: Option<Vec<GroupPerm>>,
-    pub(crate) allow_admins: Option<Vec<i64>>,
-    pub(crate) self_id: i64,
+    pub(crate) allow_admins: Option<Vec<ID>>,
+    pub(crate) self_id: ID,
 
     pub(crate) send_trigger: Option<String>,
     pub(crate) store_trigger: Option<String>,
@@ -37,9 +37,9 @@ pub(crate) struct ConfigFile {
 }
 
 pub(crate) struct Config {
-    pub(crate) allow_groups: Option<HashMap<i64, GroupPerm>>,
-    pub(crate) allow_admins: Option<Vec<i64>>,
-    pub(crate) self_id: i64,
+    pub(crate) allow_groups: Option<HashMap<ID, GroupPerm>>,
+    pub(crate) allow_admins: Option<Vec<ID>>,
+    pub(crate) self_id: ID,
 
     pub(crate) send_trigger: String,
     pub(crate) store_trigger: String,
@@ -62,10 +62,15 @@ pub(crate) async fn init(bot: &Arc<RuntimeBot>) -> Result<&Config> {
     let map = config.allow_groups.map_or(None, |e| {
         Some(
             e.iter()
-                .map(|p| (p.id, p.clone()))
+                .map(|p| (p.id.clone(), p.clone()))
                 .collect::<HashMap<_, _>>(),
         )
     });
+
+    if let None = config.self_id.try_as_i64() {
+        let id = config.self_id;
+        return Err(anyhow!("Self id should be an i64, got {id}"));
+    }
 
     Ok(CONFIG.get_or_init(|| Config {
         allow_groups: map,

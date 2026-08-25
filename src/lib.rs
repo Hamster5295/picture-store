@@ -40,7 +40,7 @@ async fn main() {
         bot.set_plugin_access_control_list(
             PLUGIN_NAME,
             true,
-            SetAccessControlList::Adds(groups.iter().map(|p| ID::new(p.0.clone())).collect()),
+            SetAccessControlList::Adds(groups.iter().map(|p| p.0.clone()).collect()),
         )
         .unwrap();
     } else {
@@ -88,7 +88,7 @@ async fn handle(
                     .as_str()
                     .ok_or(anyhow!(""))?;
                 let who = i64::from_str_radix(who, 10)?;
-                is_at |= who == cfg.self_id;
+                is_at |= who == cfg.self_id.try_as_i64_or_panic();
             }
             "reply" => {
                 reply_id = msg
@@ -126,10 +126,10 @@ async fn handle(
     let is_admin = cfg
         .allow_admins
         .clone()
-        .is_some_and(|admins| admins.contains(&event.user_id));
+        .is_some_and(|admins| admins.contains(&ID::new(event.user_id)));
     let has_send_perm = is_admin
         || cfg.allow_groups.clone().is_none_or(|groups| {
-            groups.get(&event.group_id).is_some_and(|group| {
+            groups.get(&ID::new(event.group_id)).is_some_and(|group| {
                 group.send.unwrap_or(true)
                     && group
                         .tokens
@@ -139,7 +139,7 @@ async fn handle(
         });
     let has_store_perm = is_admin
         || cfg.allow_groups.clone().is_none_or(|groups| {
-            groups.get(&event.group_id).is_some_and(|group| {
+            groups.get(&ID::new(event.group_id)).is_some_and(|group| {
                 group.store.unwrap_or(true)
                     && group
                         .tokens
