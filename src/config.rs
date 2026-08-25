@@ -7,6 +7,8 @@ use anyhow::{Context, Result};
 use kovi::{RuntimeBot, tokio::fs};
 use serde::Deserialize;
 
+use crate::consts::CONFIG_PATH;
+
 pub(crate) static CONFIG: OnceLock<Config> = OnceLock::new();
 
 #[derive(Deserialize, Clone)]
@@ -51,7 +53,7 @@ pub(crate) struct Config {
 }
 
 pub(crate) async fn init(bot: &Arc<RuntimeBot>) -> Result<&Config> {
-    let config_path = bot.get_data_path().join("config.toml");
+    let config_path = bot.get_data_path().join(CONFIG_PATH);
     let config_txt = fs::read_to_string(&config_path)
         .await
         .with_context(|| format!("Failed to read config file at {}", config_path.display()))?;

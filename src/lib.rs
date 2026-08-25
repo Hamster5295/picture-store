@@ -1,4 +1,5 @@
 mod config;
+mod consts;
 
 use std::{
     path::{Path, PathBuf},
@@ -6,8 +7,14 @@ use std::{
 };
 
 use anyhow::{Context, Result, anyhow};
+use consts::*;
 use kovi::{
-    Message, PluginBuilder as plugin, RuntimeBot, Segment, bot::runtimebot::kovi_api::SetAccessControlList, event::id::ID, log::{error, info}, serde_json::json, tokio::{
+    Message, PluginBuilder as plugin, RuntimeBot, Segment,
+    bot::runtimebot::kovi_api::SetAccessControlList,
+    event::id::ID,
+    log::{error, info},
+    serde_json::json,
+    tokio::{
         fs::{self, File},
         io::AsyncWriteExt,
         sync::RwLock,
@@ -17,7 +24,6 @@ use kovi_onebot::*;
 use reqwest::Client;
 use tinyrand::{Rand, StdRand, Wyrand};
 
-const PLUGIN_NAME: &str = "kovi-plugin-picture-store";
 static RAND: OnceLock<RwLock<Wyrand>> = OnceLock::new();
 
 #[kovi::plugin]
@@ -47,12 +53,12 @@ async fn main() {
         move |msg| on_group_msg(msg, bot.clone(), client.clone())
     });
 
-    info!("[pic-store] Ready to be a cyber hamster!");
+    info!("[{PLUGIN_HEAD}] Ready to be a cyber hamster!");
 }
 
 async fn on_group_msg(event: Arc<GroupMsgEvent>, bot: Arc<RuntimeBot>, client: Arc<Client>) {
     if let Err(err) = handle(event.clone(), bot.clone(), client).await {
-        error!("[{PLUGIN_NAME}] Error when handling message: \n{err}");
+        error!("[{PLUGIN_HEAD}] Error when handling message: \n{err}");
 
         let cfg = config::CONFIG.get().unwrap();
         bot.send_group_msg(event.group_id, cfg.err_msg.clone());
@@ -143,19 +149,19 @@ async fn handle(
         });
 
     if !is_at {
-        info!("[{PLUGIN_NAME}] Not mentioned, don't care");
+        info!("[{PLUGIN_HEAD}] Not mentioned, don't care");
         return Ok(());
     }
 
     if is_send && is_store {
-        info!("[{PLUGIN_NAME}] Send & Store in one message, send confused reply");
+        info!("[{PLUGIN_HEAD}] Send & Store in one message, send confused reply");
         bot.send_group_msg(event.group_id, cfg.cmd_err_msg.clone());
         return Ok(());
     }
 
     if is_store && !has_store_perm {
         info!(
-            "[{PLUGIN_NAME}] User {} is not allowed to store",
+            "[{PLUGIN_HEAD}] User {} is not allowed to store",
             event.user_id
         );
         bot.send_group_msg(event.group_id, cfg.no_perm_msg.clone());
@@ -164,7 +170,7 @@ async fn handle(
 
     if is_send && !has_send_perm {
         info!(
-            "[{PLUGIN_NAME}] User {} is not allowed to send",
+            "[{PLUGIN_HEAD}] User {} is not allowed to send",
             event.user_id
         );
         bot.send_group_msg(event.group_id, cfg.no_perm_msg.clone());
@@ -172,13 +178,13 @@ async fn handle(
     }
 
     if is_store && reply_id.is_none() {
-        info!("[{PLUGIN_NAME}] Store without reply");
+        info!("[{PLUGIN_HEAD}] Store without reply");
         bot.send_group_msg(event.group_id, cfg.no_source_msg.clone());
         return Ok(());
     }
 
     if (is_send || is_store) && target.is_none() {
-        info!("[{PLUGIN_NAME}] Send / Store with no target provided");
+        info!("[{PLUGIN_HEAD}] Send / Store with no target provided");
         bot.send_group_msg(event.group_id, cfg.no_target_msg.clone());
         return Ok(());
     }
@@ -197,12 +203,12 @@ async fn handle(
         .collect::<Vec<String>>()
         .join("");
 
-    info!("[{PLUGIN_NAME}] Query '{target}' -> '{folder}'");
+    info!("[{PLUGIN_HEAD}] Query '{target}' -> '{folder}'");
     let folder = bot.get_data_path().join("pictures").join(&folder);
 
     if is_send {
         if !folder.exists() {
-            info!("[{PLUGIN_NAME}] Directory does not exist, sending fallback message");
+            info!("[{PLUGIN_HEAD}] Directory does not exist, sending fallback message");
             bot.send_group_msg(event.group_id, cfg.no_pic_msg.clone());
             return Ok(());
         }
@@ -214,7 +220,7 @@ async fn handle(
 
         let mut files: Vec<PathBuf> = vec![];
 
-        info!("[{PLUGIN_NAME}] Collecting available pictures for '{target}'");
+        info!("[{PLUGIN_HEAD}] Collecting available pictures for '{target}'");
         loop {
             let entry = results.next_entry().await.context(format!(
                 "Unable to read directory '{}'",
@@ -230,7 +236,7 @@ async fn handle(
         }
 
         if files.is_empty() {
-            info!("[{PLUGIN_NAME}] No picture found, sending fallback message");
+            info!("[{PLUGIN_HEAD}] No picture found, sending fallback message");
             bot.send_group_msg(event.group_id, cfg.no_pic_msg.clone());
             return Ok(());
         }
@@ -252,7 +258,7 @@ async fn handle(
             ))
             .context("Error when constructing message")?,
         );
-        info!("[{PLUGIN_NAME}] Picture '{}' sent", file.to_string_lossy());
+        info!("[{PLUGIN_HEAD}] Picture '{}' sent", file.to_string_lossy());
     } else if is_store {
         if !folder.exists() {
             fs::create_dir_all(&folder).await?;
@@ -275,7 +281,7 @@ async fn handle(
         )
         .context("Unable to parse valid message object from onebot response")?;
         if !source.contains("image") {
-            info!("[{PLUGIN_NAME}] Store without images in reply");
+            info!("[{PLUGIN_HEAD}] Store without images in reply");
             bot.send_group_msg(event.group_id, cfg.no_source_msg.clone());
             return Ok(());
         }
@@ -286,7 +292,7 @@ async fn handle(
             }
 
             if let Err(e) = handle_pictures(seg, &folder, client.clone()).await {
-                error!("[{PLUGIN_NAME}] Error when downloading picture: {e}, Skipping");
+                error!("[{PLUGIN_HEAD}] Error when downloading picture: {e}, Skipping");
             }
         }
 
