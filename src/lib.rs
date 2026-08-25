@@ -7,17 +7,13 @@ use std::{
 
 use anyhow::{Context, Result, anyhow};
 use kovi::{
-    Message, PluginBuilder as plugin, RuntimeBot,
-    bot::{message::Segment, runtimebot::kovi_api::SetAccessControlList},
-    event::GroupMsgEvent,
-    log::{error, info},
-    serde_json::json,
-    tokio::{
+    Message, PluginBuilder as plugin, RuntimeBot, Segment, bot::runtimebot::kovi_api::SetAccessControlList, event::id::ID, log::{error, info}, serde_json::json, tokio::{
         fs::{self, File},
         io::AsyncWriteExt,
         sync::RwLock,
     },
 };
+use kovi_onebot::*;
 use reqwest::Client;
 use tinyrand::{Rand, StdRand, Wyrand};
 
@@ -38,7 +34,7 @@ async fn main() {
         bot.set_plugin_access_control_list(
             PLUGIN_NAME,
             true,
-            SetAccessControlList::Adds(groups.iter().map(|p| p.0.clone()).collect()),
+            SetAccessControlList::Adds(groups.iter().map(|p| ID::new(p.0.clone())).collect()),
         )
         .unwrap();
     } else {
@@ -77,7 +73,7 @@ async fn handle(
     let mut target = None;
 
     for msg in event.message.clone() {
-        match msg.type_.as_str() {
+        match msg.kind.as_str() {
             "at" => {
                 let who = msg
                     .data
@@ -285,7 +281,7 @@ async fn handle(
         }
 
         for seg in source {
-            if seg.type_ != "image" {
+            if seg.kind != "image" {
                 continue;
             }
 

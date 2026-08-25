@@ -2,7 +2,7 @@
 name = "kovi-plugin-picture-store"
 description = "基于 Kovi 框架的图片存取插件"
 authors = ["Hamster5295 <hamster5295@163.com>"]
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
 keywords = ["kovi", "plugin"]
 license = "MIT"
@@ -14,6 +14,7 @@ readme = "README.md"
 anyhow = ">=1.0.100"
 infer = ">=0.19.0"
 kovi = ">=0.12.6"
+kovi-onebot = "0.13.2"
 md5 = ">=0.8.0"
 reqwest = ">=0.12.20"
 serde = { version = ">=1.0.228", features = ["derive"] }
