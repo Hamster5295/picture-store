@@ -33,7 +33,10 @@ async fn main() {
     let bot = plugin::get_runtime_bot();
     let client = Arc::new(reqwest::ClientBuilder::new().build().unwrap());
 
-    let config = config::init(&bot).await.unwrap();
+    let config = config::init(&bot)
+        .await
+        .with_context(|| format!("[{PLUGIN_HEAD}] Error when parsing config"))
+        .unwrap();
 
     if let Some(groups) = &config.allow_groups {
         bot.set_plugin_access_control(PLUGIN_NAME, true).unwrap();
