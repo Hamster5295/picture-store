@@ -38,7 +38,7 @@ async fn main() {
         bot.set_plugin_access_control_list(
             PLUGIN_NAME,
             true,
-            SetAccessControlList::Adds(groups.clone()),
+            SetAccessControlList::Adds(groups.iter().map(|p| p.0.clone()).collect()),
         )
         .unwrap();
     } else {
@@ -121,15 +121,43 @@ async fn handle(
         }
     }
 
+    let is_admin = cfg
+        .allow_admins
+        .clone()
+        .is_some_and(|admins| admins.contains(&event.user_id));
+    let has_send_perm = is_admin
+        || cfg.allow_groups.clone().is_none_or(|groups| {
+            groups.get(&event.group_id).is_some_and(|group| {
+                group.send.unwrap_or(true)
+                    && group
+                        .tokens
+                        .clone()
+                        .is_none_or(|tks| tks.contains(&target.clone().unwrap_or_default()))
+            })
+        });
+    let has_store_perm = is_admin
+        || cfg.allow_groups.clone().is_none_or(|groups| {
+            groups.get(&event.group_id).is_some_and(|group| {
+                group.store.unwrap_or(true)
+                    && group
+                        .tokens
+                        .clone()
+                        .is_none_or(|tks| tks.contains(&target.clone().unwrap_or_default()))
+            })
+        });
+
     if !is_at {
         info!("[{PLUGIN_NAME}] Not mentioned, don't care");
         return Ok(());
     }
 
-    if is_store
-        && let Some(admins) = cfg.allow_admins.clone()
-        && !admins.contains(&event.user_id)
-    {
+    if is_send && is_store {
+        info!("[{PLUGIN_NAME}] Send & Store in one message, send confused reply");
+        bot.send_group_msg(event.group_id, cfg.cmd_err_msg.clone());
+        return Ok(());
+    }
+
+    if is_store && !has_store_perm {
         info!(
             "[{PLUGIN_NAME}] User {} is not allowed to store",
             event.user_id
@@ -138,9 +166,12 @@ async fn handle(
         return Ok(());
     }
 
-    if is_send && is_store {
-        info!("[{PLUGIN_NAME}] Send & Store in one message, send confused reply");
-        bot.send_group_msg(event.group_id, cfg.cmd_err_msg.clone());
+    if is_send && !has_send_perm {
+        info!(
+            "[{PLUGIN_NAME}] User {} is not allowed to send",
+            event.user_id
+        );
+        bot.send_group_msg(event.group_id, cfg.no_perm_msg.clone());
         return Ok(());
     }
 

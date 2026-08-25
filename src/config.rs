@@ -1,4 +1,7 @@
-use std::sync::{Arc, OnceLock};
+use std::{
+    collections::HashMap,
+    sync::{Arc, OnceLock},
+};
 
 use anyhow::{Context, Result};
 use kovi::{RuntimeBot, tokio::fs};
@@ -6,9 +9,17 @@ use serde::Deserialize;
 
 pub(crate) static CONFIG: OnceLock<Config> = OnceLock::new();
 
+#[derive(Deserialize, Clone)]
+pub(crate) struct GroupPerm {
+    pub(crate) id: i64,
+    pub(crate) send: Option<bool>,
+    pub(crate) store: Option<bool>,
+    pub(crate) tokens: Option<Vec<String>>,
+}
+
 #[derive(Deserialize)]
 pub(crate) struct ConfigFile {
-    pub(crate) allow_groups: Option<Vec<i64>>,
+    pub(crate) allow_groups: Option<Vec<GroupPerm>>,
     pub(crate) allow_admins: Option<Vec<i64>>,
     pub(crate) self_id: i64,
 
@@ -24,7 +35,7 @@ pub(crate) struct ConfigFile {
 }
 
 pub(crate) struct Config {
-    pub(crate) allow_groups: Option<Vec<i64>>,
+    pub(crate) allow_groups: Option<HashMap<i64, GroupPerm>>,
     pub(crate) allow_admins: Option<Vec<i64>>,
     pub(crate) self_id: i64,
 
@@ -46,8 +57,16 @@ pub(crate) async fn init(bot: &Arc<RuntimeBot>) -> Result<&Config> {
         .with_context(|| format!("Failed to read config file at {}", config_path.display()))?;
     let config: ConfigFile = toml::from_str(&config_txt)?;
 
+    let map = config.allow_groups.map_or(None, |e| {
+        Some(
+            e.iter()
+                .map(|p| (p.id, p.clone()))
+                .collect::<HashMap<_, _>>(),
+        )
+    });
+
     Ok(CONFIG.get_or_init(|| Config {
-        allow_groups: config.allow_groups,
+        allow_groups: map,
         allow_admins: config.allow_admins,
         self_id: config.self_id,
         send_trigger: config.send_trigger.unwrap_or("发".to_string()),
