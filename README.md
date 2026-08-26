@@ -19,29 +19,32 @@ let bot = build_bot!(kovi-plugin-picture-store /* 和其他你正在使用的插
 
 ## 配置
 
-Copycat 可以通过 `toml` 文件进行配置。如果配置文件不存在，则使用默认配置。  
+Picture-Store 可以通过 `toml` 文件进行配置。如果配置文件不存在，则使用默认配置。  
 
 ```toml
-# 自己的 ID, 用于判断是否在 at 自己
-self_id = 12345678
+# 自己的 ID
+self_id = 123456789
 
-# 允许收/发的群组，若没有这一项，则所有群组都可收发图片
-allow_groups = [87654321]
+# 在不同情况下 bot 反馈的信息
+success_msg = "okk~"
+err_msg = "好像出了点问题，看看日志？"
+cmd_err_msg = "一边发一边收会坏的 (悲"
+no_target_msg = "需要啥"
+no_source_msg = "似乎没看到图"
+no_pic_msg = "这是什么这是什么"
+no_perm_msg = "达咩，不听你的"
 
-# 允许收藏图片的用户，若没有这一项，则所有用户均可以让 bot 收藏图片
-allow_admins = [23456789]
+# 允许在如下群组里工作
+[[allow_groups]]
+id = 11451419
 
-# 以下均为可选配置，可以自定义 bot 的发言风格
-send_trigger = "发送图片命令前缀，默认值为'发'"
-store_trigger = "收藏图片命令前缀，默认值为'这是'"
+# 并且可以限制群组使用的字段
+[[allow_groups]]
+id = 789456123
+store = false      # 禁止保存
+tokens = ["猫猫"]   # 只能发这一种图片
 
-success_msg = "图片收藏成功时的回复"
-err_msg = "出现未知错误时的回复"
-cmd_err_msg = "用户同时要求收藏 & 发图片时的回复"
-no_target_msg = "用户没有提供要发送/收藏的类型名称时的回复"
-no_source_msg = "用户要求收藏，但没有提供图片引用时的回复"
-no_pic_msg = "用户提供的名称不能存在时的回复"
-no_perm_msg = "用户不在 allow_admins 时要求收藏图片的回复"
+
 
 ```  
 
