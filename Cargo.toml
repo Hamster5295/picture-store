@@ -19,7 +19,7 @@ ispeach = { version = "0.1.0", optional = true }
 kovi = ">=0.12.6"
 kovi-onebot = "0.13.2"
 md5 = ">=0.8.0"
-reqwest = ">=0.12.20"
+reqwest = { version = ">=0.12.20", default-features = false, features = ["rustls-tls-webpki-roots"] }
 serde = { version = ">=1.0.228", features = ["derive"] }
 tinyrand = ">=0.5.0"
 toml = ">=0.9.11"
