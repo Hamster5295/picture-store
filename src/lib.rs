@@ -7,6 +7,7 @@ use std::{
 };
 
 use anyhow::{Context, Result, anyhow};
+use bytes::Bytes;
 use consts::*;
 use kovi::{
     Message, PluginBuilder as plugin, RuntimeBot, Segment,
@@ -126,30 +127,41 @@ async fn handle(
         }
     }
 
+    let group = cfg
+        .allow_groups
+        .as_ref()
+        .and_then(|groups| groups.get(&ID::new(event.group_id)));
+
     let is_admin = cfg
         .allow_admins
         .clone()
         .is_some_and(|admins| admins.contains(&ID::new(event.user_id)));
     let has_send_perm = is_admin
-        || cfg.allow_groups.clone().is_none_or(|groups| {
-            groups.get(&ID::new(event.group_id)).is_some_and(|group| {
-                group.send.unwrap_or(true)
-                    && group
-                        .tokens
-                        .clone()
-                        .is_none_or(|tks| tks.contains(&target.clone().unwrap_or_default()))
-            })
+        || group.is_some_and(|group| {
+            group.send.unwrap_or(true)
+                && group
+                    .tokens
+                    .clone()
+                    .is_none_or(|tks| tks.contains(&target.clone().unwrap_or_default()))
         });
+
     let has_store_perm = is_admin
-        || cfg.allow_groups.clone().is_none_or(|groups| {
-            groups.get(&ID::new(event.group_id)).is_some_and(|group| {
-                group.store.unwrap_or(true)
-                    && group
-                        .tokens
-                        .clone()
-                        .is_none_or(|tks| tks.contains(&target.clone().unwrap_or_default()))
-            })
+        || group.is_some_and(|group| {
+            group.store.unwrap_or(true)
+                && group
+                    .tokens
+                    .clone()
+                    .is_none_or(|tks| tks.contains(&target.clone().unwrap_or_default()))
         });
+
+    #[cfg(feature = "taozi")]
+    {
+        let has_taozi_perm = is_admin || group.is_some_and(|group| group.taozi.unwrap_or(true));
+
+        if has_taozi_perm {
+            handle_taozi(event.clone(), bot.clone(), client.clone()).await?;
+        }
+    }
 
     if !is_at {
         info!("[{PLUGIN_HEAD}] Not mentioned, don't care");
@@ -306,6 +318,12 @@ async fn handle(
 }
 
 async fn handle_pictures(seg: Segment, folder: &PathBuf, client: Arc<Client>) -> Result<()> {
+    let bytes = handle_image_segment(seg, client).await?;
+    picture_store(bytes, folder).await?;
+    Ok(())
+}
+
+async fn handle_image_segment(seg: Segment, client: Arc<Client>) -> Result<Bytes> {
     let url = seg
         .data
         .get("url")
@@ -320,6 +338,10 @@ async fn handle_pictures(seg: Segment, folder: &PathBuf, client: Arc<Client>) ->
     }
 
     let bytes = resp.bytes().await.context("Failed to read response body")?;
+    Ok(bytes)
+}
+
+async fn picture_store(bytes: bytes::Bytes, folder: &PathBuf) -> Result<()> {
     let typ = infer::get(&bytes).context("Could not determine file type")?;
     let checksum = md5::compute(&bytes);
 
@@ -333,7 +355,51 @@ async fn handle_pictures(seg: Segment, folder: &PathBuf, client: Arc<Client>) ->
         .await
         .context("Failed to write file")?;
 
-    info!("Picture '{name}' saved");
+    info!("[{PLUGIN_HEAD}] Picture '{name}' saved");
+    Ok(())
+}
+
+#[cfg(feature = "taozi")]
+async fn handle_taozi(
+    event: Arc<GroupMsgEvent>,
+    bot: Arc<RuntimeBot>,
+    client: Arc<Client>,
+) -> Result<()> {
+    let cfg = config::CONFIG.get().unwrap();
+
+    let msg = event.message.clone();
+    if !msg.contains("image") {
+        info!("[{PLUGIN_HEAD}] Not a img message, ignored");
+        return Ok(());
+    }
+
+    let imgs = msg.get("image");
+    let mut sent = false;
+    for seg in imgs {
+        use std::str::FromStr;
+
+        use ispeach::is_peach;
+
+        let bytes = handle_image_segment(seg, client.clone()).await?;
+        let img = image::load_from_memory(bytes.as_ref())?;
+
+        if !is_peach(&img)? {
+            continue;
+        }
+
+        if !sent {
+            info!("[{PLUGIN_HEAD}] Taozi detected!");
+            bot.send_group_msg(event.group_id, cfg.taozi_msg.clone());
+            sent = true;
+        }
+
+        let folder = PathBuf::from_str("230161131229173144")?;
+        picture_store(bytes, &folder).await?
+    }
+
+    if !sent {
+        info!("[{PLUGIN_HEAD}] No Taozi detected");
+    }
 
     Ok(())
 }

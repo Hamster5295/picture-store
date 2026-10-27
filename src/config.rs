@@ -17,6 +17,9 @@ pub(crate) struct GroupPerm {
     pub(crate) send: Option<bool>,
     pub(crate) store: Option<bool>,
     pub(crate) tokens: Option<Vec<String>>,
+
+    #[cfg(feature = "taozi")]
+    pub(crate) taozi: Option<bool>,
 }
 
 #[derive(Deserialize)]
@@ -34,6 +37,9 @@ pub(crate) struct ConfigFile {
     pub(crate) no_source_msg: Option<String>,
     pub(crate) no_pic_msg: Option<String>,
     pub(crate) no_perm_msg: Option<String>,
+
+    #[cfg(feature = "taozi")]
+    pub(crate) taozi_msg: Option<String>,
 }
 
 pub(crate) struct Config {
@@ -50,6 +56,9 @@ pub(crate) struct Config {
     pub(crate) no_source_msg: String,
     pub(crate) no_pic_msg: String,
     pub(crate) no_perm_msg: String,
+
+    #[cfg(feature = "taozi")]
+    pub(crate) taozi_msg: String,
 }
 
 pub(crate) async fn init(bot: &Arc<RuntimeBot>) -> Result<&Config> {
@@ -89,5 +98,8 @@ pub(crate) async fn init(bot: &Arc<RuntimeBot>) -> Result<&Config> {
         no_source_msg: config.no_source_msg.unwrap_or("请引用一张图片".to_string()),
         no_pic_msg: config.no_pic_msg.unwrap_or("没有找到此类图片".to_string()),
         no_perm_msg: config.no_perm_msg.unwrap_or("权限不足".to_string()),
+
+        #[cfg(feature = "taozi")]
+        taozi_msg: config.taozi_msg.unwrap_or("桃子可爱捏~".to_string()),
     }))
 }
