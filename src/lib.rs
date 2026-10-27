@@ -376,8 +376,6 @@ async fn handle_taozi(
     let imgs = msg.get("image");
     let mut sent = false;
     for seg in imgs {
-        use std::str::FromStr;
-
         use ispeach::is_peach;
 
         let bytes = handle_image_segment(seg, client.clone()).await?;
@@ -393,7 +391,10 @@ async fn handle_taozi(
             sent = true;
         }
 
-        let folder = PathBuf::from_str("230161131229173144")?;
+        let folder = bot
+            .get_data_path()
+            .join("pictures")
+            .join("230161131229173144");
         picture_store(bytes, &folder).await?
     }
 
