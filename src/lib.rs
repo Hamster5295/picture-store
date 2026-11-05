@@ -65,7 +65,10 @@ async fn on_group_msg(event: Arc<GroupMsgEvent>, bot: Arc<RuntimeBot>, client: A
         error!("[{PLUGIN_HEAD}] Error when handling message: \n{err}");
 
         let cfg = config::CONFIG.get().unwrap();
-        bot.send_group_msg(event.group_id, cfg.err_msg.clone());
+
+        if let Some(msg) = &cfg.err_msg {
+            bot.send_group_msg(event.group_id, msg);
+        }
     }
 }
 

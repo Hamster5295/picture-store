@@ -50,7 +50,7 @@ pub(crate) struct Config {
     pub(crate) send_trigger: String,
     pub(crate) store_trigger: String,
     pub(crate) success_msg: String,
-    pub(crate) err_msg: String,
+    pub(crate) err_msg: Option<String>,
     pub(crate) cmd_err_msg: String,
     pub(crate) no_target_msg: String,
     pub(crate) no_source_msg: String,
@@ -88,7 +88,7 @@ pub(crate) async fn init(bot: &Arc<RuntimeBot>) -> Result<&Config> {
         send_trigger: config.send_trigger.unwrap_or("发".to_string()),
         store_trigger: config.store_trigger.unwrap_or("这是".to_string()),
         success_msg: config.success_msg.unwrap_or("图片已记录".to_string()),
-        err_msg: config.err_msg.unwrap_or("出现神秘问题".to_string()),
+        err_msg: config.err_msg,
         cmd_err_msg: config
             .cmd_err_msg
             .unwrap_or("无法同时发送和记录图片".to_string()),
