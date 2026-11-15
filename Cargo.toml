@@ -2,7 +2,7 @@
 name = "kovi-plugin-picture-store"
 description = "基于 Kovi 框架的图片存取插件"
 authors = ["Hamster5295 <hamster5295@163.com>"]
-version = "1.0.0"
+version = "1.1.0"
 edition = "2024"
 keywords = ["kovi", "plugin"]
 license = "MIT"
